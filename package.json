@@ -1,0 +1,21 @@
+{
+  "name": "lucky-board",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lucky Board: 6/45 당첨번호 기록과 내 번호 확인 (LuckyWheel 연동)",
+  "scripts": {
+    "update:draws": "node scripts/update-draws.mjs",
+    "android:configure": "node scripts/configure-android.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/app-launcher": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/local-notifications": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.0"
+  }
+}

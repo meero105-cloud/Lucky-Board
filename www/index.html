@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Lucky Board</title>
+<style>
+  :root {
+    --bg: #0c1322; --panel: #141d31; --panel2: #1b263f; --line: #28344f;
+    --fg: #e8edf6; --muted: #8f9bb4; --accent: #f3b23a; --good: #4cc38a; --bad: #e5675f;
+    --b1: #f6c443; --b2: #4f8ff0; --b3: #ec5a55; --b4: #9aa3b2; --b5: #49c07a;
+    --nav-h: 64px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body { font: 15px/1.5 "Pretendard", "Malgun Gothic", system-ui, -apple-system, sans-serif;
+         padding: env(safe-area-inset-top) 0 calc(var(--nav-h) + env(safe-area-inset-bottom)); }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 6px; max-width: 720px; margin: 0 auto; }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: .2px; }
+  header h1 span { color: var(--accent); }
+  #sync { font-size: 12px; color: var(--muted); background: none; border: 0; padding: 4px 0; }
+  main { max-width: 720px; margin: 0 auto; padding: 0 16px 24px; }
+  section.tab { display: none; }
+  section.tab.on { display: block; }
+  h2 { font-size: 15px; margin: 22px 0 10px; color: var(--muted); font-weight: 600; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .between { justify-content: space-between; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .big { font-size: 22px; font-weight: 700; }
+  .ball { width: 34px; height: 34px; border-radius: 50%; display: inline-grid; place-items: center; font-weight: 700; font-size: 14px;
+          color: #10131a; flex: none; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+  .ball.sm { width: 26px; height: 26px; font-size: 12px; }
+  .ball.dim { opacity: .28; }
+  .ball.hit { outline: 2px solid var(--fg); outline-offset: 1px; }
+  .c1 { background: var(--b1); } .c2 { background: var(--b2); color: #fff; } .c3 { background: var(--b3); color: #fff; }
+  .c4 { background: var(--b4); } .c5 { background: var(--b5); }
+  .plus { color: var(--muted); font-weight: 700; margin: 0 2px; }
+  .pill { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--panel2); color: var(--muted); border: 1px solid var(--line); }
+  .pill.win { background: rgba(243,178,58,.15); color: var(--accent); border-color: rgba(243,178,58,.4); }
+  .pill.good { color: var(--good); border-color: rgba(76,195,138,.4); }
+  .btn { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; }
+  .btn.primary { background: var(--accent); color: #1a1406; border-color: var(--accent); font-weight: 700; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .btn.ghost { background: none; }
+  input[type=search], input[type=number] { background: var(--panel2); border: 1px solid var(--line); color: var(--fg); border-radius: 10px; padding: 9px 12px; font: inherit; width: 100%; }
+  .list > .item { padding: 12px 0; border-top: 1px solid var(--line); }
+  .list > .item:first-child { border-top: 0; }
+  .grid45 { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
+  .grid45 button { aspect-ratio: 1; border-radius: 50%; border: 1px solid var(--line); background: var(--panel2); font-weight: 600; font-size: 14px; padding: 0; }
+  .grid45 button.on { color: #10131a; border-color: transparent; }
+  .grid45 button.on.c2, .grid45 button.on.c3 { color: #fff; }
+  .seg { display: flex; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; }
+  .seg button { flex: 1; border: 0; background: none; border-radius: 7px; padding: 6px 4px; font-size: 13px; color: var(--muted); }
+  .seg button.on { background: var(--panel); color: var(--fg); }
+  .bars { display: grid; gap: 4px; }
+  .bar { display: grid; grid-template-columns: 30px 1fr 48px; align-items: center; gap: 8px; font-size: 12px; }
+  .bar .track { height: 12px; background: var(--panel2); border-radius: 6px; overflow: hidden; }
+  .bar .fill { height: 100%; border-radius: 6px; }
+  .bar .n { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stat3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .stat3 .card { padding: 10px; text-align: center; }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(12,19,34,.96); border-top: 1px solid var(--line);
+        display: flex; padding-bottom: env(safe-area-inset-bottom); backdrop-filter: blur(8px); z-index: 5; }
+  nav button { flex: 1; height: var(--nav-h); border: 0; background: none; color: var(--muted); font-size: 12px; display: grid; place-items: center; align-content: center; gap: 2px; }
+  nav button svg { width: 22px; height: 22px; }
+  nav button.on { color: var(--accent); }
+  .toast { position: fixed; left: 50%; bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+           background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; opacity: 0; transition: .25s; pointer-events: none; z-index: 9; max-width: calc(100% - 32px); }
+  .toast.on { opacity: 1; transform: translateX(-50%); }
+  .switch { position: relative; width: 46px; height: 26px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .switch span { position: absolute; inset: 0; background: var(--panel2); border: 1px solid var(--line); border-radius: 999px; transition: .2s; }
+  .switch span::after { content: ""; position: absolute; width: 20px; height: 20px; left: 2px; top: 2px; background: var(--muted); border-radius: 50%; transition: .2s; }
+  .switch input:checked + span { background: rgba(243,178,58,.25); border-color: var(--accent); }
+  .switch input:checked + span::after { transform: translateX(20px); background: var(--accent); }
+  .empty { text-align: center; color: var(--muted); padding: 22px 8px; }
+  a { color: var(--accent); }
+  .x { border: 0; background: none; color: var(--muted); padding: 4px 6px; font-size: 18px; line-height: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Lucky <span>Board</span></h1>
+  <button id="sync" type="button" title="새로고침">불러오는 중…</button>
+</header>
+
+<main>
+  <!-- 당첨번호 -->
+  <section class="tab on" id="tab-draws">
+    <div class="card" id="latest"></div>
+    <div class="card" style="margin-top:10px" id="next"></div>
+    <h2>회차별 당첨번호</h2>
+    <input type="search" id="q" inputmode="numeric" placeholder="회차 번호로 찾기 (예: 1000)">
+    <div class="list" id="drawList" style="margin-top:6px"></div>
+    <div class="row" style="justify-content:center;margin-top:8px"><button class="btn ghost" id="more" type="button">더 보기</button></div>
+  </section>
+
+  <!-- 내 번호 -->
+  <section class="tab" id="tab-mine">
+    <h2>번호 고르기 <span class="muted" id="pickCount">0 / 6</span></h2>
+    <div class="card">
+      <div class="grid45" id="picker"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="autoPick" type="button">자동</button>
+        <button class="btn" id="clearPick" type="button">지우기</button>
+        <span style="flex:1"></span>
+        <button class="btn primary" id="savePick" type="button" disabled>저장</button>
+      </div>
+    </div>
+    <h2>저장한 번호</h2>
+    <div class="card"><div class="list" id="tickets"></div></div>
+  </section>
+
+  <!-- 통계 -->
+  <section class="tab" id="tab-stats">
+    <h2>범위</h2>
+    <div class="seg" id="range">
+      <button type="button" data-n="0" class="on">전체</button>
+      <button type="button" data-n="100">최근 100회</button>
+      <button type="button" data-n="50">최근 50회</button>
+      <button type="button" data-n="10">최근 10회</button>
+    </div>
+    <label class="row muted" style="margin-top:10px"><input type="checkbox" id="withBonus"> 보너스 번호 포함</label>
+    <div class="stat3" style="margin-top:12px" id="summary"></div>
+    <h2>많이 나온 번호</h2>
+    <div class="card row" id="hot"></div>
+    <h2>적게 나온 번호</h2>
+    <div class="card row" id="cold"></div>
+    <h2>오래 안 나온 번호</h2>
+    <div class="card row" id="gap"></div>
+    <h2>번호별 출현 횟수</h2>
+    <div class="row" style="margin-bottom:8px">
+      <div class="seg" id="order" style="flex:1">
+        <button type="button" data-o="num" class="on">번호순</button>
+        <button type="button" data-o="count">많은순</button>
+      </div>
+    </div>
+    <div class="card bars" id="bars"></div>
+  </section>
+
+  <!-- 설정 -->
+  <section class="tab" id="tab-more">
+    <h2>알림</h2>
+    <div class="card row between">
+      <div><div>토요일 추첨 알림</div><div class="muted">매주 토요일 밤 9시에 결과 확인을 알려 드려요</div></div>
+      <label class="switch"><input type="checkbox" id="notify"><span></span></label>
+    </div>
+    <h2>LuckyWheel</h2>
+    <div class="card">
+      <div class="muted" style="margin-bottom:10px">LuckyWheel에서 굴려 나온 번호를 보내면 여기 '내 번호'에 저장돼요. 저장한 번호를 LuckyWheel로 보내 굴려 볼 수도 있어요.</div>
+      <button class="btn" id="openWheel" type="button">LuckyWheel 열기</button>
+    </div>
+    <h2>데이터</h2>
+    <div class="card">
+      <div id="dataInfo" class="muted"></div>
+      <div class="row" style="margin-top:10px"><button class="btn" id="refresh" type="button">지금 새로고침</button></div>
+    </div>
+    <h2>안내</h2>
+    <div class="card muted" style="line-height:1.7">
+      Lucky Board는 6/45 추첨 결과를 보기 쉽게 정리하는 <b>비공식</b> 기록 앱이에요. 복권을 팔거나 구매를 대행하지 않고, 번호를 예측하지 않습니다.
+      결과에 오류가 있을 수 있으니 정확한 당첨 여부는 공식 판매처 사이트에서 꼭 확인하세요.
+      저장한 번호와 설정은 이 기기 안에만 보관됩니다.<br>
+      데이터 출처: <a href="https://github.com/smok95/lotto" target="_blank" rel="noopener">smok95/lotto</a> 공개 JSON
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button type="button" data-tab="draws" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="12" r="3.2"/><circle cx="17" cy="12" r="3.2"/><circle cx="12" cy="5.5" r="2.4"/><circle cx="12" cy="18.5" r="2.4"/></svg>당첨번호</button>
+  <button type="button" data-tab="mine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>내 번호</button>
+  <button type="button" data-tab="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 20V11M12 20V4M19 20v-6"/></svg>통계</button>
+  <button type="button" data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.6 15H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.7l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9.7 4V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg>설정</button>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script src="draws.js"></script>
+<script>
+'use strict';
+// ---------- constants ----------
+const STORE = 'luckyboard.v1';
+const LIVE = 'https://smok95.github.io/lotto/results/';
+const WHEEL_ID = 'com.beatfactory.airball';            // LuckyWheel's Android app ID
+const WHEEL_STORE = 'https://play.google.com/store/apps/details?id=' + WHEEL_ID;
+const FIRST_DRAW = Date.UTC(2002, 11, 7, 11, 35);       // draw 1: 2002-12-07 20:35 KST
+const WEEK = 7 * 864e5;
+const SALES_CLOSE = 35 * 60e3;                          // sales stop 20:00 KST, 35 min before the draw
+const NOTIFY_ID = 645;
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const cap = window.Capacitor;
+const native = !!(cap && cap.isNativePlatform && cap.isNativePlatform());
+const P = (cap && cap.Plugins) || {};
+
+// ---------- state ----------
+let S = { tickets: [], extra: [], lastSync: 0, notify: false };
+try { Object.assign(S, JSON.parse(localStorage.getItem(STORE) || '{}')); } catch (e) {}
+const save = () => { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} };
+
+let DRAWS = [];          // rows: [draw, date, n1..n6, bonus, firstPrize, firstWinners]
+function mergeDraws() {
+  const map = new Map();
+  for (const r of (window.DRAWS || [])) map.set(r[0], r);
+  for (const r of S.extra) if (!map.has(r[0])) map.set(r[0], r);
+  DRAWS = [...map.values()].sort((a, b) => a[0] - b[0]);
+  // keep only the rows the bundle doesn't have
+  const bundled = new Set((window.DRAWS || []).map(r => r[0]));
+  S.extra = S.extra.filter(r => !bundled.has(r[0]));
+}
+const latest = () => DRAWS[DRAWS.length - 1];
+const byNo = n => DRAWS[n - 1] && DRAWS[n - 1][0] === n ? DRAWS[n - 1] : DRAWS.find(r => r[0] === n);
+const nums = r => r.slice(2, 8);
+
+// draw N happens 7*(N-1) days after draw 1
+const drawTime = n => FIRST_DRAW + (n - 1) * WEEK;
+function currentTarget(now = Date.now()) {          // the draw a ticket bought now would be for
+  let n = Math.floor((now - FIRST_DRAW) / WEEK) + 1;
+  while (drawTime(n) - SALES_CLOSE <= now) n++;
+  return Math.max(n, 1);
+}
+
+// ---------- helpers ----------
+const color = n => n <= 10 ? 'c1' : n <= 20 ? 'c2' : n <= 30 ? 'c3' : n <= 40 ? 'c4' : 'c5';
+const ball = (n, cls = '') => `<span class="ball ${color(n)} ${cls}">${n}</span>`;
+const won = v => v >= 1e8 ? (v / 1e8).toFixed(v >= 1e10 ? 0 : 1).replace(/\.0$/, '') + '억 원' : v >= 1e4 ? Math.round(v / 1e4).toLocaleString('ko-KR') + '만 원' : v.toLocaleString('ko-KR') + '원';
+const fmtDate = s => { const [y, m, d] = s.split('-'); return `${y}.${m}.${d}`; };
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2600); }
+function rank(pick, r) {
+  const w = nums(r), m = pick.filter(n => w.includes(n)).length, b = pick.includes(r[8]);
+  return m === 6 ? 1 : m === 5 && b ? 2 : m === 5 ? 3 : m === 4 ? 4 : m === 3 ? 5 : 0;
+}
+const validSet = a => Array.isArray(a) && a.length === 6 && new Set(a).size === 6 && a.every(n => Number.isInteger(n) && n >= 1 && n <= 45);
+
+// ---------- draws tab ----------
+let shown = 30;
+function renderLatest() {
+  const r = latest();
+  if (!r) { $('#latest').innerHTML = '<div class="empty">당첨번호 데이터가 없어요.</div>'; return; }
+  $('#latest').innerHTML = `
+    <div class="row between"><div><span class="big">${r[0]}회</span> <span class="muted">${fmtDate(r[1])} 추첨</span></div><span class="pill">최신</span></div>
+    <div class="row" style="margin:12px 0 10px">${nums(r).map(n => ball(n)).join('')}<span class="plus">+</span>${ball(r[8])}</div>
+    <div class="muted">${r[10] ? `1등 ${r[10]}명 · 1인당 ${won(r[9])}` : '1등 당첨자 없음'}</div>`;
+  const next = currentTarget(), t = drawTime(next), left = t - Date.now();
+  const d = Math.floor(left / 864e5), h = Math.floor(left % 864e5 / 36e5), m = Math.floor(left % 36e5 / 6e4);
+  const pending = next - 1 > r[0];
+  $('#next').innerHTML = `<div class="row between"><div>다음 추첨 <b>${next}회</b></div><div class="muted">${left > 0 ? (d ? d + '일 ' : '') + h + '시간 ' + m + '분 남음' : '곧 추첨'}</div></div>` +
+    (pending ? `<div class="muted" style="margin-top:6px">${next - 1}회 결과를 아직 못 받았어요. 위의 새로고침을 눌러 주세요.</div>` : '');
+}
+function drawItem(r) {
+  return `<div class="item"><div class="row between"><b>${r[0]}회</b><span class="muted">${fmtDate(r[1])}</span></div>
+    <div class="row" style="margin-top:6px;gap:5px">${nums(r).map(n => ball(n, 'sm')).join('')}<span class="plus">+</span>${ball(r[8], 'sm')}
+    <span style="flex:1"></span><span class="muted">${r[10] ? r[10] + '명 · ' + won(r[9]) : '1등 없음'}</span></div></div>`;
+}
+function renderList() {
+  const q = $('#q').value.trim();
+  let rows;
+  if (q) { const n = parseInt(q, 10); rows = DRAWS.filter(r => String(r[0]).startsWith(String(n))).reverse().slice(0, 50); }
+  else rows = DRAWS.slice(-shown).reverse();
+  $('#drawList').innerHTML = rows.length ? rows.map(drawItem).join('') : '<div class="empty">찾는 회차가 없어요.</div>';
+  $('#more').style.display = !q && shown < DRAWS.length ? '' : 'none';
+}
+
+// ---------- my numbers ----------
+let pick = [];
+function renderPicker() {
+  $('#picker').innerHTML = Array.from({ length: 45 }, (_, i) => i + 1)
+    .map(n => `<button type="button" data-n="${n}" class="${pick.includes(n) ? 'on ' + color(n) : ''}">${n}</button>`).join('');
+  $('#pickCount').textContent = `${pick.length} / 6`;
+  $('#savePick').disabled = pick.length !== 6;
+}
+function addTicket(set, src) {
+  const sorted = [...set].sort((a, b) => a - b);
+  const target = currentTarget();
+  if (S.tickets.some(t => t.target === target && t.n.join() === sorted.join())) return false;
+  S.tickets.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), n: sorted, src, target, at: Date.now() });
+  save();
+  return true;
+}
+const SRC = { manual: '직접', auto: '자동', wheel: 'LuckyWheel' };
+const RANK_LABEL = ['낙첨', '1등', '2등', '3등', '4등', '5등'];
+function renderTickets() {
+  if (!S.tickets.length) { $('#tickets').innerHTML = '<div class="empty">아직 저장한 번호가 없어요.<br>위에서 6개를 골라 저장하거나 LuckyWheel에서 보내 주세요.</div>'; return; }
+  $('#tickets').innerHTML = S.tickets.map(t => {
+    const r = byNo(t.target);
+    let res;
+    if (!r) res = `<span class="pill">${t.target}회 추첨 전</span>`;
+    else { const k = rank(t.n, r); res = `<span class="pill ${k ? 'win' : ''}">${t.target}회 ${RANK_LABEL[k]}</span>`; }
+    const hist = [0, 0, 0, 0, 0, 0]; for (const d of DRAWS) hist[rank(t.n, d)]++;
+    const best = hist.findIndex((c, i) => i > 0 && c > 0);
+    const histText = [1, 2, 3, 4, 5].filter(i => hist[i]).map(i => `${RANK_LABEL[i]} ${hist[i]}번`).join(' · ') || '3개 이상 맞은 적 없음';
+    const w = r ? nums(r) : [];
+    return `<div class="item">
+      <div class="row between"><div class="row">${res}<span class="pill">${SRC[t.src] || t.src}</span></div>
+        <div class="row" style="gap:0"><button class="x" data-wheel="${t.id}" type="button" title="LuckyWheel로 보내기">↗</button><button class="x" data-del="${t.id}" type="button" title="삭제">×</button></div></div>
+      <div class="row" style="margin-top:8px;gap:5px">${t.n.map(n => ball(n, r ? (w.includes(n) ? 'hit' : n === r[8] ? '' : 'dim') : '')).join('')}</div>
+      <div class="muted" style="margin-top:6px">지난 ${DRAWS.length}회에 대입하면: ${histText}${best === 1 ? ' 🎉' : ''}</div></div>`;
+  }).join('');
+}
+
+// ---------- stats ----------
+let range = 0, order = 'num';
+function renderStats() {
+  const rows = range ? DRAWS.slice(-range) : DRAWS;
+  const withBonus = $('#withBonus').checked;
+  const cnt = Array(46).fill(0), last = Array(46).fill(0);
+  for (const r of rows) { for (const n of nums(r)) cnt[n]++; if (withBonus) cnt[r[8]]++; }
+  for (const r of DRAWS) { for (const n of nums(r)) last[n] = r[0]; }
+  const all = Array.from({ length: 45 }, (_, i) => i + 1);
+  const desc = [...all].sort((a, b) => cnt[b] - cnt[a] || a - b);
+  const asc = [...all].sort((a, b) => cnt[a] - cnt[b] || a - b);
+  const L = latest() ? latest()[0] : 0;
+  const gap = [...all].sort((a, b) => last[a] - last[b] || a - b);
+  let odd = 0, sum = 0; for (const r of rows) { const a = nums(r); odd += a.filter(n => n % 2).length; sum += a.reduce((x, y) => x + y, 0); }
+  $('#summary').innerHTML = `
+    <div class="card"><div class="muted">회차 수</div><div class="big">${rows.length}</div></div>
+    <div class="card"><div class="muted">홀수 비율</div><div class="big">${rows.length ? Math.round(odd / rows.length / 6 * 100) : 0}%</div></div>
+    <div class="card"><div class="muted">평균 합계</div><div class="big">${rows.length ? Math.round(sum / rows.length) : 0}</div></div>`;
+  const chips = list => list.map(n => `<div style="text-align:center">${ball(n)}<div class="muted">${cnt[n]}번</div></div>`).join('');
+  $('#hot').innerHTML = chips(desc.slice(0, 6));
+  $('#cold').innerHTML = chips(asc.slice(0, 6));
+  $('#gap').innerHTML = gap.slice(0, 6).map(n => `<div style="text-align:center">${ball(n)}<div class="muted">${L - last[n]}회 전</div></div>`).join('');
+  const max = Math.max(1, ...cnt);
+  const list = order === 'num' ? all : desc;
+  $('#bars').innerHTML = list.map(n => `<div class="bar">${ball(n, 'sm')}<div class="track"><div class="fill" style="width:${cnt[n] / max * 100}%;background:var(--b${'12345'[(n - 1) / 10 | 0]})"></div></div><div class="n">${cnt[n]}</div></div>`).join('');
+}
+
+// ---------- settings ----------
+function renderData() {
+  const r = latest();
+  $('#dataInfo').innerHTML = r ? `1회 ~ ${r[0]}회 (${fmtDate(r[1])})까지 ${DRAWS.length}회 보관 중<br>마지막 확인: ${S.lastSync ? new Date(S.lastSync).toLocaleString('ko-KR') : '아직 없음'}` : '데이터 없음';
+  $('#sync').textContent = r ? `${r[0]}회까지 · 새로고침` : '새로고침';
+  $('#notify').checked = !!S.notify;
+}
+function renderAll() { renderLatest(); renderList(); renderPicker(); renderTickets(); renderStats(); renderData(); }
+
+// ---------- live update ----------
+function fromJson(d) {
+  const n = [...d.numbers].sort((a, b) => a - b);
+  if (!validSet(n) || !Number.isInteger(d.bonus_no)) throw new Error('bad data');
+  const f = (d.divisions && d.divisions[0]) || {};
+  return [d.draw_no, String(d.date).slice(0, 10), ...n, d.bonus_no, f.prize || 0, f.winners || 0];
+}
+async function getJson(url) {
+  const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 12000);
+  try { const res = await fetch(url, { cache: 'no-store', signal: ctl.signal }); if (!res.ok) throw new Error('HTTP ' + res.status); return await res.json(); }
+  finally { clearTimeout(timer); }
+}
+let syncing = false;
+async function sync(manual) {
+  if (syncing) return; syncing = true;
+  $('#sync').textContent = '확인 중…';
+  const before = latest() ? latest()[0] : 0;
+  try {
+    const top = fromJson(await getJson(LIVE + 'latest.json'));
+    const have = new Set(DRAWS.map(r => r[0]));
+    const missing = []; for (let n = 1; n <= top[0]; n++) if (!have.has(n)) missing.push(n);
+    if (missing.length > 20) {
+      const all = await getJson(LIVE + 'all.json');
+      for (const d of all) if (!have.has(d.draw_no)) S.extra.push(fromJson(d));
+    } else {
+      for (const n of missing) S.extra.push(n === top[0] ? top : fromJson(await getJson(LIVE + n + '.json')));
+    }
+    S.lastSync = Date.now(); mergeDraws(); save(); renderAll();
+    const after = latest()[0];
+    if (after > before) toast(`${after}회 당첨번호를 받았어요`);
+    else if (manual) toast('이미 최신이에요');
+  } catch (e) {
+    renderData();
+    if (manual) toast('지금은 새 결과를 받을 수 없어요. 저장된 기록을 보여 드릴게요.');
+  } finally { syncing = false; }
+}
+
+// ---------- notifications ----------
+async function setNotify(on) {
+  const LN = P.LocalNotifications;
+  if (!native || !LN) { S.notify = on; save(); if (on) toast('알림은 앱에서만 울려요'); return; }
+  try {
+    if (on) {
+      const p = await LN.requestPermissions();
+      if (p.display !== 'granted') { S.notify = false; save(); renderData(); toast('알림 권한을 허용해야 받을 수 있어요'); return; }
+      await LN.cancel({ notifications: [{ id: NOTIFY_ID }] });
+      await LN.schedule({ notifications: [{
+        id: NOTIFY_ID, title: '이번 주 추첨 결과가 나왔어요',
+        body: '저장한 번호가 맞았는지 확인해 보세요.',
+        schedule: { on: { weekday: 7, hour: 21, minute: 0 }, allowWhileIdle: true }
+      }] });
+      toast('매주 토요일 밤 9시에 알려 드릴게요');
+    } else {
+      await LN.cancel({ notifications: [{ id: NOTIFY_ID }] });
+    }
+    S.notify = on; save();
+  } catch (e) { S.notify = false; save(); renderData(); toast('알림을 설정하지 못했어요'); }
+}
+
+// ---------- LuckyWheel link ----------
+// Lucky Board accepts: luckyboard://add?n=1,2,3,4,5,6[&n=...]&src=luckywheel
+function importFromUrl(url) {
+  let u; try { u = new URL(url); } catch (e) { return; }
+  const params = u.protocol === 'luckyboard:' ? u.searchParams : new URLSearchParams(u.hash.replace(/^#/, ''));
+  const sets = params.getAll('n').map(s => s.split(/[,.\s]+/).map(Number)).filter(validSet);
+  if (!sets.length) return;
+  const src = params.get('src') === 'luckywheel' ? 'wheel' : 'manual';
+  const added = sets.filter(s => addTicket(s, src)).length;
+  renderTickets(); go('mine');
+  toast(added ? `${src === 'wheel' ? 'LuckyWheel에서 ' : ''}번호 ${added}세트를 저장했어요` : '이미 저장된 번호예요');
+  if (u.protocol !== 'luckyboard:') history.replaceState(null, '', location.pathname);
+}
+async function openWheel(set) {
+  const AL = P.AppLauncher;
+  const deep = 'luckywheel://pick' + (set ? '?n=' + set.join(',') : '');
+  if (native && AL) {
+    try {
+      if (set && (await AL.canOpenUrl({ url: deep })).value) { await AL.openUrl({ url: deep }); return; }
+      if ((await AL.canOpenUrl({ url: WHEEL_ID })).value) {
+        await AL.openUrl({ url: WHEEL_ID });
+        if (set) toast('이 버전의 LuckyWheel은 번호 받기를 아직 지원하지 않아요');
+        return;
+      }
+    } catch (e) {}
+  }
+  window.open(WHEEL_STORE, '_blank');
+}
+
+// ---------- navigation ----------
+function go(tab) {
+  $$('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  $$('section.tab').forEach(s => s.classList.toggle('on', s.id === 'tab-' + tab));
+  window.scrollTo(0, 0);
+  try { sessionStorage.setItem('luckyboard.tab', tab); } catch (e) {}
+}
+
+// ---------- events ----------
+$$('nav button').forEach(b => b.addEventListener('click', () => go(b.dataset.tab)));
+$('#q').addEventListener('input', renderList);
+$('#more').addEventListener('click', () => { shown += 50; renderList(); });
+$('#sync').addEventListener('click', () => sync(true));
+$('#refresh').addEventListener('click', () => sync(true));
+$('#picker').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const n = +b.dataset.n;
+  if (pick.includes(n)) pick = pick.filter(x => x !== n);
+  else if (pick.length < 6) pick.push(n);
+  else { toast('6개까지 고를 수 있어요'); return; }
+  renderPicker();
+});
+let pickSrc = 'manual';
+$('#autoPick').addEventListener('click', () => {
+  const pool = Array.from({ length: 45 }, (_, i) => i + 1).filter(n => !pick.includes(n));
+  while (pick.length < 6) pick.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  pickSrc = 'auto'; renderPicker();
+});
+$('#clearPick').addEventListener('click', () => { pick = []; pickSrc = 'manual'; renderPicker(); });
+$('#savePick').addEventListener('click', () => {
+  if (!addTicket(pick, pickSrc)) { toast('이미 저장된 번호예요'); return; }
+  pick = []; pickSrc = 'manual'; renderPicker(); renderTickets(); toast(`${currentTarget()}회 번호로 저장했어요`);
+});
+$('#tickets').addEventListener('click', e => {
+  const del = e.target.closest('[data-del]'), wh = e.target.closest('[data-wheel]');
+  if (del) { if (!confirm('이 번호를 지울까요?')) return; S.tickets = S.tickets.filter(t => t.id !== del.dataset.del); save(); renderTickets(); }
+  if (wh) { const t = S.tickets.find(x => x.id === wh.dataset.wheel); if (t) openWheel(t.n); }
+});
+$('#range').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; range = +b.dataset.n; $$('#range button').forEach(x => x.classList.toggle('on', x === b)); renderStats(); });
+$('#order').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; order = b.dataset.o; $$('#order button').forEach(x => x.classList.toggle('on', x === b)); renderStats(); });
+$('#withBonus').addEventListener('change', renderStats);
+$('#notify').addEventListener('change', e => setNotify(e.target.checked));
+$('#openWheel').addEventListener('click', () => openWheel());
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { renderLatest(); if (Date.now() - S.lastSync > 30 * 60e3) sync(false); } });
+
+// ---------- start ----------
+mergeDraws(); renderAll();
+try { const t = sessionStorage.getItem('luckyboard.tab'); if (t) go(t); } catch (e) {}
+if (P.App) {
+  P.App.addListener('appUrlOpen', ev => importFromUrl(ev.url));
+  P.App.getLaunchUrl().then(r => r && r.url && importFromUrl(r.url)).catch(() => {});
+}
+if (location.hash.includes('n=')) importFromUrl(location.href);
+window.addEventListener('hashchange', () => { if (location.hash.includes('n=')) importFromUrl(location.href); });
+setInterval(renderLatest, 60e3);
+sync(false);
+</script>
+</body>
+</html>
