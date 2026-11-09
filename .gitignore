@@ -1,0 +1,11 @@
+node_modules/
+android/
+*.aab
+*.apk
+
+# signing material never goes into the repository
+*.jks
+*.keystore
+*.p12
+KEYSTORE_BASE64.txt
+서명키*.txt
