@@ -8,7 +8,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const versionCode = parseInt(process.env.VERSION_CODE || '1', 10);
 const versionName = pkg.version;
-const LUCKYWHEEL_ID = 'com.beatfactory.airball';
+const LUCKYWHEEL_ID = 'com.beatfactory.luckywheel';
 
 function patch(file, edits) {
   let text = readFileSync(file, 'utf8');
