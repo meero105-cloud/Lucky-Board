@@ -1,0 +1,13 @@
+{
+  "appId": "com.beatfactory.luckyboard",
+  "appName": "Lucky Board",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#0c1322"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "iconColor": "#f3b23a"
+    }
+  }
+}
