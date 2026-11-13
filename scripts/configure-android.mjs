@@ -59,10 +59,19 @@ const queries = [
   ''
 ].join('\n');
 
+// Same SDK levels as LuckyWheel: Play's automatic protection needs minSdk 24+, and target the newest API Play asks for.
+patch(join(root, 'android', 'variables.gradle'), [
+  [/minSdkVersion\s*=\s*\d+/, 'minSdkVersion = 24', 'minSdkVersion'],
+  [/compileSdkVersion\s*=\s*\d+/, 'compileSdkVersion = 36', 'compileSdkVersion'],
+  [/targetSdkVersion\s*=\s*\d+/, 'targetSdkVersion = 36', 'targetSdkVersion']
+]);
+
 patch(join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'), [
   // first </intent-filter> belongs to MainActivity's launcher filter
   [/(<\/intent-filter>)/, `$1${deepLink}`, 'MainActivity intent filter'],
   [/(\s*)<application/, `\n${queries}$1<application`, 'application tag'],
+  // Google code scanner (ticket QR): Play services shows the camera UI, so the app needs no camera permission
+  [/<application([^>]*)>/, '<application$1>\n        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" />', 'barcode scanner module'],
   [/(<\/manifest>)/, '    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n$1', 'manifest end']
 ]);
 
